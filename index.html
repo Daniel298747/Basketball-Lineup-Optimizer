@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LineupIQ — Basketball Optimizer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+  <style>
+    /* ═══════════════════════════════════════
+       RESET
+    ═══════════════════════════════════════ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ═══════════════════════════════════════
+       CSS VARIABLES  — blue / white / yellow
+    ═══════════════════════════════════════ */
+    :root {
+      /* Background scale — white to light blue-grey */
+      --bg:          #f0f4fb;
+      --bg2:         #ffffff;
+      --bg3:         #e8eef8;
+      --bg4:         #d8e3f5;
+
+      /* Brand colours */
+      --blue-dark:   #0a2463;   /* deep navy */
+      --blue-mid:    #1e4fd8;   /* strong royal blue */
+      --blue-light:  #3d7ef5;   /* bright blue */
+      --blue-pale:   #dce9ff;   /* tint for badges */
+      --yellow:      #f5c518;   /* bold gold/yellow */
+      --yellow-dark: #c9970a;   /* darker yellow for text */
+      --yellow-pale: #fff8d6;   /* pale yellow tint */
+
+      /* Text */
+      --text:        #0a1a3d;   /* near-black navy */
+      --text2:       #3a4f7a;   /* medium blue-grey */
+      --text3:       #7a8fb5;   /* muted */
+
+      /* Borders */
+      --border:      rgba(10,36,99,0.10);
+      --border2:     rgba(10,36,99,0.20);
+
+      /* Typography */
+      --font-display: 'Bebas Neue', sans-serif;
+      --font-body:    'DM Sans', sans-serif;
+
+      /* Shape */
+      --radius:    10px;
+      --radius-lg: 16px;
+
+      /* Shadows */
+      --shadow-sm: 0 2px 8px rgba(10,36,99,0.08);
+      --shadow-md: 0 4px 20px rgba(10,36,99,0.12);
+      --shadow-lg: 0 8px 40px rgba(10,36,99,0.14);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--font-body);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Subtle dot pattern on bg */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: radial-gradient(circle, rgba(10,36,99,0.06) 1px, transparent 1px);
+      background-size: 28px 28px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Decorative blobs */
+    .blob {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(100px);
+      pointer-events: none;
+      z-index: 0;
+      animation: blobDrift 16s ease-in-out infinite alternate;
+    }
+    .blob1 {
+      width: 600px; height: 600px;
+      background: rgba(30,79,216,0.12);
+      top: -200px; right: -150px;
+    }
+    .blob2 {
+      width: 500px; height: 500px;
+      background: rgba(245,197,24,0.14);
+      bottom: -150px; left: -100px;
+      animation-delay: -7s;
+    }
+    @keyframes blobDrift {
+      from { transform: translate(0,0) scale(1); }
+      to   { transform: translate(20px,30px) scale(1.06); }
+    }
+
+    /* ═══════════════════════════════════════
+       NAV
+    ═══════════════════════════════════════ */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(255,255,255,0.90);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border2);
+      box-shadow: var(--shadow-sm);
+      padding: 0 2rem;
+    }
+    .nav-inner {
+      max-width: 1200px; margin: 0 auto;
+      display: flex; align-items: center; justify-content: space-between;
+      height: 64px;
+    }
+    .nav-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+    .logo-icon {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, var(--blue-mid), var(--blue-dark));
+      border-radius: 9px;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 3px 10px rgba(30,79,216,0.35);
+    }
+    .logo-text {
+      font-family: var(--font-display);
+      font-size: 24px; letter-spacing: 0.05em;
+      color: var(--blue-dark);
+    }
+    .logo-text span { color: var(--yellow-dark); }
+    .nav-pill {
+      font-size: 10px; font-weight: 600; letter-spacing: 0.08em;
+      color: var(--blue-mid);
+      background: var(--blue-pale);
+      border: 1px solid rgba(30,79,216,0.2);
+      padding: 4px 12px; border-radius: 20px;
+    }
+
+    /* ═══════════════════════════════════════
+       LAYOUT WRAPPER
+    ═══════════════════════════════════════ */
+    .wrap {
+      position: relative; z-index: 1;
+      max-width: 1200px; margin: 0 auto;
+      padding: 0 2rem 5rem;
+    }
+
+    /* ═══════════════════════════════════════
+       HERO
+    ═══════════════════════════════════════ */
+    .hero {
+      padding: 4rem 0 2rem;
+      display: flex; align-items: flex-end;
+      justify-content: space-between; gap: 2rem; flex-wrap: wrap;
+    }
+    .hero-title {
+      font-family: var(--font-display);
+      font-size: clamp(56px, 9vw, 100px);
+      line-height: 0.88; letter-spacing: 0.02em;
+      color: var(--blue-dark);
+    }
+    .hero-title .accent {
+      display: block;
+      color: var(--yellow-dark);
+      /* yellow text with blue outline effect */
+      -webkit-text-stroke: 1px var(--blue-dark);
+    }
+    .hero-sub {
+      font-size: 14px; color: var(--text2);
+      margin-top: 1.1rem; max-width: 400px; line-height: 1.7;
+    }
+    .hero-nums { display: flex; gap: 2.5rem; flex-wrap: wrap; }
+    .h-num {
+      text-align: right;
+      background: var(--bg2);
+      border: 1px solid var(--border2);
+      border-radius: var(--radius-lg);
+      padding: 1rem 1.5rem;
+      box-shadow: var(--shadow-sm);
+    }
+    .h-num-val {
+      font-family: var(--font-display);
+      font-size: 42px; color: var(--blue-mid);
+      letter-spacing: 0.02em; line-height: 1;
+    }
+    .h-num-lbl {
+      font-size: 10px; color: var(--text3);
+      text-transform: uppercase; letter-spacing: 0.08em; margin-top: 4px;
+    }
+
+    /* ═══════════════════════════════════════
+       DIVIDER
+    ═══════════════════════════════════════ */
+    .divider {
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--blue-mid), var(--yellow), var(--blue-mid), transparent);
+      margin: 0.5rem 0 2rem; opacity: 0.4;
+    }
+
+    /* ═══════════════════════════════════════
+       METRIC CARDS
+    ═══════════════════════════════════════ */
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0,1fr));
+      gap: 12px; margin-bottom: 2rem;
+    }
+    .metric {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 1.25rem 1.5rem;
+      box-shadow: var(--shadow-sm);
+      position: relative; overflow: hidden;
+      animation: fadeUp 0.5s ease both;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .metric:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); }
+    /* coloured top stripe */
+    .metric::before {
+      content: ''; position: absolute;
+      top: 0; left: 0; right: 0; height: 3px;
+    }
+    .metric.blue::before   { background: linear-gradient(90deg, var(--blue-mid), var(--blue-light)); }
+    .metric.yellow::before { background: linear-gradient(90deg, var(--yellow-dark), var(--yellow)); }
+    .metric.navy::before   { background: linear-gradient(90deg, var(--blue-dark), var(--blue-mid)); }
+    .metric.gold::before   { background: linear-gradient(90deg, var(--yellow), #f0a500); }
+
+    .metric-lbl {
+      font-size: 10px; color: var(--text3);
+      text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px;
+    }
+    .metric-val {
+      font-family: var(--font-display);
+      font-size: 42px; letter-spacing: 0.02em; line-height: 1;
+    }
+    .metric-val.blue   { color: var(--blue-mid); }
+    .metric-val.yellow { color: var(--yellow-dark); }
+    .metric-val.navy   { color: var(--blue-dark); }
+    .metric-val.teal   { color: #0a8a6e; }
+    .metric-sub { font-size: 11px; color: var(--text3); margin-top: 7px; }
+
+    /* ═══════════════════════════════════════
+       SECTION HEADING
+    ═══════════════════════════════════════ */
+    .sec-head {
+      font-family: var(--font-display);
+      font-size: 13px; letter-spacing: 0.14em;
+      color: var(--text3); text-transform: uppercase;
+      margin-bottom: 1rem;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .sec-head::before {
+      content: '';
+      width: 4px; height: 16px;
+      background: linear-gradient(180deg, var(--blue-mid), var(--yellow));
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+    .sec-head::after { content:''; flex:1; height:1px; background: var(--border2); }
+
+    /* ═══════════════════════════════════════
+       GRIDS
+    ═══════════════════════════════════════ */
+    .grid-main { display: grid; grid-template-columns: 1.25fr 0.75fr; gap: 1rem; margin-bottom: 1rem; }
+    .grid-2    { display: grid; grid-template-columns: 1fr 1fr;       gap: 1rem; margin-bottom: 1rem; }
+
+    /* ═══════════════════════════════════════
+       CARDS
+    ═══════════════════════════════════════ */
+    .card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 1.5rem;
+      box-shadow: var(--shadow-sm);
+      animation: fadeUp 0.5s ease both;
+      transition: box-shadow 0.2s;
+    }
+    .card:hover { box-shadow: var(--shadow-md); }
+    .card-title {
+      font-family: var(--font-display);
+      font-size: 20px; letter-spacing: 0.06em;
+      color: var(--blue-dark); margin-bottom: 1.25rem;
+    }
+
+    /* ═══════════════════════════════════════
+       SCENARIO TABS
+    ═══════════════════════════════════════ */
+    .tabs {
+      display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 1.25rem;
+      padding: 5px; background: var(--bg3);
+      border-radius: var(--radius); border: 1px solid var(--border);
+    }
+    .tab {
+      flex: 1; font-family: var(--font-body);
+      font-size: 12px; font-weight: 500;
+      padding: 7px 8px; border-radius: 7px; border: none;
+      background: transparent; color: var(--text3);
+      cursor: pointer; transition: all 0.18s; white-space: nowrap;
+    }
+    .tab:hover  { color: var(--blue-mid); background: var(--blue-pale); }
+    .tab.active { background: var(--blue-dark); color: #fff; font-weight: 600; }
+
+    /* ═══════════════════════════════════════
+       PLAYER ROWS
+    ═══════════════════════════════════════ */
+    .player-row {
+      display: flex; align-items: center; gap: 11px;
+      padding: 9px 7px; border-bottom: 1px solid var(--border);
+      border-radius: 7px; transition: background 0.12s;
+    }
+    .player-row:last-child { border-bottom: none; }
+    .player-row:hover { background: var(--blue-pale); }
+
+    .pos-pill {
+      font-size: 9px; font-weight: 700; letter-spacing: 0.06em;
+      padding: 3px 8px; border-radius: 20px;
+      min-width: 32px; text-align: center;
+    }
+    .pos-PG { background: rgba(30,79,216,0.12);  color: var(--blue-mid);   border: 1px solid rgba(30,79,216,0.25); }
+    .pos-SG { background: rgba(10,36,99,0.10);   color: var(--blue-dark);  border: 1px solid rgba(10,36,99,0.2); }
+    .pos-SF { background: rgba(245,197,24,0.18); color: var(--yellow-dark); border: 1px solid rgba(201,151,10,0.3); }
+    .pos-PF { background: rgba(61,126,245,0.12); color: var(--blue-light); border: 1px solid rgba(61,126,245,0.25); }
+    .pos-C  { background: rgba(10,138,110,0.10); color: #0a6e58;           border: 1px solid rgba(10,138,110,0.2); }
+
+    .player-name { font-size: 14px; font-weight: 500; flex: 1; color: var(--text); }
+
+    .stat-micro  { display: flex; gap: 4px; align-items: flex-end; }
+    .micro-wrap  { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+    .micro-lbl   { font-size: 8px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.03em; }
+    .micro-bar   {
+      width: 7px; height: 28px; background: var(--bg3);
+      border-radius: 4px; display: flex; align-items: flex-end; overflow: hidden;
+    }
+    .micro-fill  { width: 100%; border-radius: 4px; }
+    .ovr-num {
+      font-family: var(--font-display); font-size: 17px;
+      letter-spacing: 0.03em; min-width: 38px;
+      text-align: right; color: var(--blue-dark);
+    }
+
+    /* ═══════════════════════════════════════
+       SYNERGY PANEL
+    ═══════════════════════════════════════ */
+    .syn-big {
+      font-family: var(--font-display); font-size: 64px;
+      color: var(--yellow-dark); letter-spacing: 0.03em; line-height: 1;
+      text-shadow: 2px 2px 0px rgba(10,36,99,0.1);
+    }
+    .syn-sub-lbl {
+      font-size: 10px; color: var(--text3);
+      text-transform: uppercase; letter-spacing: 0.08em; margin-top: 4px;
+    }
+    .syn-checks { margin-top: 1rem; display: flex; flex-direction: column; gap: 5px; }
+    .syn-check {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 12px; color: var(--text2);
+      padding: 7px 10px; border-radius: 7px;
+      background: var(--bg3); border: 1px solid var(--border);
+    }
+    .syn-check.ok {
+      color: #0a6e58;
+      border-color: rgba(10,138,110,0.2);
+      background: rgba(10,138,110,0.06);
+    }
+    .syn-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+    .syn-dot.ok   { background: #0a8a6e; }
+    .syn-dot.fail { background: var(--border2); }
+
+    .rating-trio {
+      display: flex; justify-content: space-between;
+      margin-top: 1.25rem; padding-top: 1.25rem;
+      border-top: 2px solid var(--bg3);
+    }
+    .rating-item { text-align: center; flex: 1; }
+    .rating-num  { font-family: var(--font-display); font-size: 28px; letter-spacing: 0.03em; }
+    .rating-lbl  { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.07em; margin-top: 3px; }
+    .r-off { color: var(--blue-mid); }
+    .r-def { color: #0a8a6e; }
+    .r-net { color: var(--yellow-dark); }
+
+    /* ═══════════════════════════════════════
+       ROSTER TABLE
+    ═══════════════════════════════════════ */
+    .roster-tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .roster-tbl th {
+      font-size: 10px; font-weight: 600; letter-spacing: 0.08em;
+      text-transform: uppercase; color: var(--text3);
+      padding: 6px 10px; border-bottom: 2px solid var(--bg3); text-align: left;
+    }
+    .roster-tbl td { padding: 9px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    .roster-tbl tr:last-child td { border-bottom: none; }
+    .roster-tbl tr { transition: background 0.12s; }
+    .roster-tbl tr:hover td { background: var(--blue-pale); }
+    .ovr-cell  { font-family: var(--font-display); font-size: 16px; color: var(--blue-dark); }
+    .off-cell  { color: var(--blue-mid); font-weight: 500; }
+    .def-cell  { color: #0a8a6e; font-weight: 500; }
+    .tbl-bar   { height: 5px; background: var(--bg3); border-radius: 3px; width: 80px; overflow: hidden; }
+    .tbl-fill  { height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--blue-mid), var(--blue-light)); }
+
+    /* ═══════════════════════════════════════
+       CHART
+    ═══════════════════════════════════════ */
+    .chart-legend {
+      display: flex; gap: 16px; font-size: 11px;
+      color: var(--text3); margin-bottom: 10px; letter-spacing: 0.04em;
+    }
+    .leg-dot { width: 10px; height: 10px; border-radius: 2px; display: inline-block; margin-right: 5px; vertical-align: middle; }
+    .chart-wrap { position: relative; height: 220px; }
+
+    /* ═══════════════════════════════════════
+       GAME SIM QUARTERS
+    ═══════════════════════════════════════ */
+    .sim-grid {
+      display: grid; grid-template-columns: repeat(4,minmax(0,1fr));
+      gap: 10px; margin-top: 1rem;
+    }
+    .q-card {
+      background: var(--bg3); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 1.1rem;
+      position: relative; overflow: hidden;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .q-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); }
+    /* bottom accent bar */
+    .q-card::after {
+      content: ''; position: absolute;
+      bottom: 0; left: 0; right: 0; height: 3px;
+    }
+    .q-off::after { background: linear-gradient(90deg, var(--blue-mid), var(--blue-light)); }
+    .q-bal::after { background: linear-gradient(90deg, var(--yellow-dark), var(--yellow)); }
+    .q-def::after { background: linear-gradient(90deg, #0a6e58, #0ab88a); }
+    .q-cls::after { background: linear-gradient(90deg, var(--blue-dark), var(--blue-mid)); }
+
+    .q-label   { font-family: var(--font-display); font-size: 26px; letter-spacing: 0.05em; color: var(--blue-dark); margin-bottom: 5px; }
+    .q-mode-pill {
+      font-size: 9px; font-weight: 700; letter-spacing: 0.08em;
+      text-transform: uppercase; padding: 3px 8px; border-radius: 20px;
+      display: inline-block; margin-bottom: 10px;
+    }
+    .pill-off { background: var(--blue-pale);   color: var(--blue-mid); }
+    .pill-bal { background: var(--yellow-pale); color: var(--yellow-dark); }
+    .pill-def { background: rgba(10,138,110,0.12); color: #0a6e58; }
+    .pill-cls { background: rgba(10,36,99,0.10);   color: var(--blue-dark); }
+
+    .q-players  { font-size: 11px; color: var(--text2); line-height: 2.1; }
+    .q-score    { font-family: var(--font-display); font-size: 24px; color: var(--blue-dark); margin-top: 10px; }
+    .q-score-lbl { font-size: 9px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.07em; }
+
+    /* ═══════════════════════════════════════
+       FOOTER
+    ═══════════════════════════════════════ */
+    .footer {
+      margin-top: 3rem; padding-top: 1.5rem;
+      border-top: 1px solid var(--border2);
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 11px; color: var(--text3); flex-wrap: wrap; gap: 0.5rem;
+    }
+
+    /* ═══════════════════════════════════════
+       ANIMATIONS
+    ═══════════════════════════════════════ */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(18px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .metric:nth-child(1) { animation-delay: 0.05s; }
+    .metric:nth-child(2) { animation-delay: 0.10s; }
+    .metric:nth-child(3) { animation-delay: 0.15s; }
+    .metric:nth-child(4) { animation-delay: 0.20s; }
+    .card:nth-child(1)   { animation-delay: 0.08s; }
+    .card:nth-child(2)   { animation-delay: 0.14s; }
+
+    /* ═══════════════════════════════════════
+       RESPONSIVE
+    ═══════════════════════════════════════ */
+    @media (max-width: 920px) {
+      .grid-main, .grid-2 { grid-template-columns: 1fr; }
+      .sim-grid  { grid-template-columns: repeat(2,1fr); }
+      .metrics   { grid-template-columns: repeat(2,1fr); }
+    }
+    @media (max-width: 520px) {
+      .hero-nums { display: none; }
+      .wrap      { padding: 0 1rem 3rem; }
+      .sim-grid  { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="blob blob1"></div>
+<div class="blob blob2"></div>
+
+<!-- ── NAV ── -->
+<nav>
+  <div class="nav-inner">
+    <a class="nav-logo" href="#">
+      <div class="logo-icon">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <rect x="1" y="3.5" width="18" height="13" rx="2" stroke="white" stroke-width="1.5" fill="none"/>
+          <circle cx="10" cy="10" r="3.5" stroke="white" stroke-width="1.3" fill="none"/>
+          <line x1="10" y1="3.5" x2="10" y2="16.5" stroke="white" stroke-width="1"/>
+        </svg>
+      </div>
+      <span class="logo-text">Lineup<span>IQ</span></span>
+    </a>
+    <span class="nav-pill">CS Portfolio · Java OOP</span>
+  </div>
+</nav>
+
+<!-- ── MAIN ── -->
+<div class="wrap">
+
+  <!-- Hero -->
+  <section class="hero">
+    <div>
+      <h1 class="hero-title">LINEUP<span class="accent">OPTIMIZER</span></h1>
+      <p class="hero-sub">Combinatorial lineup analysis engine. Evaluates every possible 5-player combination from a 10-player roster using weighted performance metrics, synergy modelling, and a 48-minute fatigue simulation.</p>
+    </div>
+    <div class="hero-nums">
+      <div class="h-num">
+        <div class="h-num-val">252</div>
+        <div class="h-num-lbl">Combinations</div>
+      </div>
+      <div class="h-num">
+        <div class="h-num-val">10</div>
+        <div class="h-num-lbl">Players</div>
+      </div>
+      <div class="h-num">
+        <div class="h-num-val">7</div>
+        <div class="h-num-lbl">Attributes</div>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- Metrics -->
+  <div class="metrics">
+    <div class="metric blue">
+      <div class="metric-lbl">Top lineup score</div>
+      <div class="metric-val blue" id="m-top">—</div>
+      <div class="metric-sub">Composite rating</div>
+    </div>
+    <div class="metric yellow">
+      <div class="metric-lbl">Best offensive rating</div>
+      <div class="metric-val yellow" id="m-off">—</div>
+      <div class="metric-sub">Per-100 possessions</div>
+    </div>
+    <div class="metric navy">
+      <div class="metric-lbl">Best defensive rating</div>
+      <div class="metric-val navy" id="m-def">—</div>
+      <div class="metric-sub">Per-100 possessions</div>
+    </div>
+    <div class="metric gold">
+      <div class="metric-lbl">Roster avg OVR</div>
+      <div class="metric-val teal" id="m-ovr">—</div>
+      <div class="metric-sub">Across 10 players</div>
+    </div>
+  </div>
+
+  <!-- Lineup + Synergy -->
+  <div class="sec-head">Optimal Lineup</div>
+  <div class="grid-main">
+    <div class="card">
+      <div class="card-title">Five-Man Unit</div>
+      <div class="tabs" id="tabRow">
+        <button class="tab active" data-idx="0">Overall</button>
+        <button class="tab" data-idx="1">Offensive</button>
+        <button class="tab" data-idx="2">Defensive</button>
+        <button class="tab" data-idx="3">Closing</button>
+      </div>
+      <div id="lineupDisplay"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Synergy Analysis</div>
+      <div id="synergyDisplay"></div>
+    </div>
+  </div>
+
+  <!-- Roster + Chart -->
+  <div class="sec-head">Roster & Rankings</div>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Full Roster</div>
+      <table class="roster-tbl" id="rosterTable"></table>
+    </div>
+    <div class="card">
+      <div class="card-title">Top 5 Lineup Ratings</div>
+      <div class="chart-legend">
+        <span><span class="leg-dot" style="background:#1e4fd8;"></span>Offensive</span>
+        <span><span class="leg-dot" style="background:#0a8a6e;"></span>Defensive</span>
+      </div>
+      <div class="chart-wrap"><canvas id="lineupChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Game Sim -->
+  <div class="sec-head">Game Simulation</div>
+  <div class="card">
+    <div class="card-title">48-Minute Fatigue Model</div>
+    <div class="sim-grid" id="simGrid"></div>
+  </div>
+
+  <div class="footer">
+    <span>LineupIQ &mdash; Basketball Lineup Optimizer &mdash; CS Portfolio Project</span>
+    <span>Java OOP · C(10,5) = 252 Combinations · Weighted Scoring · Synergy Model</span>
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════════════════
+     JAVASCRIPT  —  all logic lives here
+════════════════════════════════════════════ -->
+<script>
+
+  /* ─────────────────────────────────────────
+     1. PLAYER DATA
+     Each player has 7 numeric attributes (0–100).
+     This mirrors the Java Player class exactly.
+  ───────────────────────────────────────── */
+  const PLAYERS = [
+    { name:"Marcus Webb",    pos:"PG", scoring:82, defense:68, rebounding:45, playmaking:91, athleticism:80, threePoint:78, stamina:85 },
+    { name:"Jordan Ellis",   pos:"PG", scoring:74, defense:72, rebounding:42, playmaking:85, athleticism:76, threePoint:65, stamina:90 },
+    { name:"Darius Cole",    pos:"SG", scoring:88, defense:65, rebounding:50, playmaking:70, athleticism:82, threePoint:84, stamina:80 },
+    { name:"Kai Thompson",   pos:"SG", scoring:80, defense:70, rebounding:48, playmaking:75, athleticism:79, threePoint:88, stamina:75 },
+    { name:"Lamar Okafor",   pos:"SF", scoring:76, defense:80, rebounding:72, playmaking:68, athleticism:85, threePoint:72, stamina:82 },
+    { name:"Trevon Hayes",   pos:"SF", scoring:83, defense:74, rebounding:68, playmaking:72, athleticism:88, threePoint:60, stamina:78 },
+    { name:"DeShawn Morris", pos:"PF", scoring:70, defense:85, rebounding:82, playmaking:60, athleticism:83, threePoint:55, stamina:88 },
+    { name:"Elijah Grant",   pos:"PF", scoring:78, defense:78, rebounding:79, playmaking:65, athleticism:80, threePoint:63, stamina:84 },
+    { name:"Malik Osei",     pos:"C",  scoring:65, defense:88, rebounding:91, playmaking:52, athleticism:75, threePoint:40, stamina:86 },
+    { name:"Byron Stokes",   pos:"C",  scoring:72, defense:82, rebounding:87, playmaking:58, athleticism:78, threePoint:45, stamina:80 },
+  ];
+
+  /* ─────────────────────────────────────────
+     2. RATING FORMULAS
+     These are the same weighted equations as
+     the Java methods — just written in JS.
+     e.g. ovr() = Player.getOverallRating()
+  ───────────────────────────────────────── */
+  const ovr  = p => p.scoring*.25 + p.defense*.20 + p.rebounding*.15 + p.playmaking*.15 + p.athleticism*.10 + p.threePoint*.10 + p.stamina*.05;
+  const offS = p => p.scoring*.40 + p.playmaking*.30 + p.threePoint*.20 + p.athleticism*.10;
+  const defS = p => p.defense*.50 + p.rebounding*.30 + p.athleticism*.20;
+
+  /* ─────────────────────────────────────────
+     3. SYNERGY CALCULATION
+     Mirrors Lineup.java calculateSynergy().s
+     Rewards: positional balance, shooting,
+     playmaking, star power.
+     Penalises: weak defence, low stamina.
+  ───────────────────────────────────────── */
+  function synergy(g) {
+    let s = 0;
+    s += new Set(g.map(p => p.pos)).size * 2;
+    const pm = g.reduce((a,p) => a+p.playmaking, 0) / 5;
+    const sc = g.reduce((a,p) => a+p.scoring,    0) / 5;
+    if (pm > 70 && sc > 75) s += 6; else if (pm > 60 && sc > 65) s += 3;
+    s += g.filter(p => p.threePoint > 65).length * 2.5;
+    if (g.reduce((a,p) => a+p.defense, 0) / 5 < 55) s -= 5;
+    if (g.reduce((a,p) => a+p.stamina, 0) / 5 < 40) s -= 4;
+    if (g.some(p => ovr(p) > 85)) s += 4;
+    return Math.max(0, s);
+  }
+
+  /* ─────────────────────────────────────────
+     4. LINEUP RATINGS
+     lOff  = Lineup.getOffensiveRating()
+     lDef  = Lineup.getDefensiveRating()
+     lNet  = Lineup.getNetRating()
+     lComp = Lineup.getCompositeScore()
+  ───────────────────────────────────────── */
+  const lOff  = g => g.reduce((a,p) => a+offS(p), 0)/5 + synergy(g)*0.4;
+  const lDef  = g => g.reduce((a,p) => a+defS(p), 0)/5 + synergy(g)*0.3;
+  const lNet  = g => lOff(g) - lDef(g);
+  const lComp = g => lOff(g)*0.5 + lDef(g)*0.35 + synergy(g)*0.15;
+
+  /* ─────────────────────────────────────────
+     5. COMBINATION GENERATOR  C(10,5) = 252
+     Recursive backtracking — same logic as
+     LineupOptimizer.generateCombinations().
+     Produces every unique 5-player group.
+  ───────────────────────────────────────── */
+  function combos(n, k) {
+    const res = [];
+    (function gen(start, cur) {
+      if (cur.length === k) { res.push([...cur]); return; }
+      for (let i = start; i < n; i++) { cur.push(i); gen(i+1, cur); cur.pop(); }
+    })(0, []);
+    return res;
+  }
+
+  /* Build + sort all lineups by composite score */
+  const ALL = combos(10, 5).map(c => c.map(i => PLAYERS[i]));
+  ALL.sort((a, b) => lComp(b) - lComp(a));
+
+  /* ─────────────────────────────────────────
+     6. SCENARIO LINEUPS
+     Each tab shows the best lineup optimised
+     for a different goal (off / def / net).
+  ───────────────────────────────────────── */
+  const SC = [
+    { lineup: ALL[0] },
+    { lineup: [...ALL].sort((a,b) => lOff(b)-lOff(a))[0] },
+    { lineup: [...ALL].sort((a,b) => lDef(b)-lDef(a))[0] },
+    { lineup: [...ALL].sort((a,b) => lNet(b)-lNet(a))[0] },
+  ];
+
+  /* ─────────────────────────────────────────
+     7. POPULATE METRIC CARDS
+  ───────────────────────────────────────── */
+  document.getElementById('m-top').textContent = lComp(ALL[0]).toFixed(1);
+  document.getElementById('m-off').textContent = Math.max(...ALL.map(lOff)).toFixed(1);
+  document.getElementById('m-def').textContent = Math.max(...ALL.map(lDef)).toFixed(1);
+  document.getElementById('m-ovr').textContent = (PLAYERS.reduce((a,p) => a+ovr(p), 0) / PLAYERS.length).toFixed(1);
+
+  /* ─────────────────────────────────────────
+     8. LINEUP RENDERER
+     Called every time a tab is clicked.
+     Rebuilds both the player list and the
+     synergy panel for whichever scenario
+     is selected.
+  ───────────────────────────────────────── */
+  function renderLineup(idx) {
+    const g   = SC[idx].lineup;
+    const syn = synergy(g);
+    const off = lOff(g), def = lDef(g);
+
+    /* Player rows */
+    document.getElementById('lineupDisplay').innerHTML = g.map(p => {
+      const bars = [
+        { l:'SCR', v:p.scoring,    c:'#1e4fd8' },
+        { l:'DEF', v:p.defense,    c:'#0a8a6e' },
+        { l:'3PT', v:p.threePoint, c:'#c9970a' },
+      ].map(b => `<div class="micro-wrap">
+        <div class="micro-bar">
+          <div class="micro-fill" style="height:${Math.round(b.v*.28)}px; background:${b.c};"></div>
+        </div>
+        <div class="micro-lbl">${b.l}</div>
+      </div>`).join('');
+
+      return `<div class="player-row">
+        <span class="pos-pill pos-${p.pos}">${p.pos}</span>
+        <span class="player-name">${p.name}</span>
+        <div class="stat-micro">${bars}</div>
+        <span class="ovr-num">${ovr(p).toFixed(1)}</span>
+      </div>`;
+    }).join('');
+
+    /* Synergy checks */
+    const checks = [
+      [new Set(g.map(p=>p.pos)).size===5,       'Full positional balance (+10)',        'Limited positional balance'],
+      [g.filter(p=>p.threePoint>65).length>=3,  `${g.filter(p=>p.threePoint>65).length} floor spacers (+${(g.filter(p=>p.threePoint>65).length*2.5).toFixed(0)})`, 'Limited floor spacing'],
+      [g.reduce((a,p)=>a+p.playmaking,0)/5>70,  'Elite playmaking synergy (+6)',        'Moderate playmaking synergy'],
+      [g.reduce((a,p)=>a+p.defense,0)/5>=55,    'Defensive floor maintained',          'Defensive penalty (−5)'],
+      [g.some(p=>ovr(p)>85),                    'Star power bonus (+4)',               'No star threshold reached'],
+    ].map(([ok,y,n]) => `<div class="syn-check ${ok?'ok':''}">
+      <div class="syn-dot ${ok?'ok':'fail'}"></div>${ok?y:n}
+    </div>`).join('');
+
+    document.getElementById('synergyDisplay').innerHTML = `
+      <div class="syn-big">+${syn.toFixed(1)}</div>
+      <div class="syn-sub-lbl">Synergy Bonus</div>
+      <div class="syn-checks">${checks}</div>
+      <div class="rating-trio">
+        <div class="rating-item">
+          <div class="rating-num r-off">${off.toFixed(1)}</div>
+          <div class="rating-lbl">Offensive</div>
+        </div>
+        <div class="rating-item">
+          <div class="rating-num r-def">${def.toFixed(1)}</div>
+          <div class="rating-lbl">Defensive</div>
+        </div>
+        <div class="rating-item">
+          <div class="rating-num r-net">${(off-def).toFixed(1)}</div>
+          <div class="rating-lbl">Net</div>
+        </div>
+      </div>`;
+  }
+
+  /* Tab click handler */
+  document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    renderLineup(+t.dataset.idx);
+  }));
+  renderLineup(0);
+
+  /* ─────────────────────────────────────────
+     9. ROSTER TABLE
+  ───────────────────────────────────────── */
+  const sorted = [...PLAYERS].sort((a,b) => ovr(b)-ovr(a));
+  document.getElementById('rosterTable').innerHTML =
+    `<thead><tr>
+      <th>Player</th><th>Pos</th><th>OVR</th><th>OFF</th><th>DEF</th><th></th>
+    </tr></thead><tbody>` +
+    sorted.map(p => `<tr>
+      <td style="font-weight:500">${p.name}</td>
+      <td><span class="pos-pill pos-${p.pos}">${p.pos}</span></td>
+      <td class="ovr-cell">${ovr(p).toFixed(1)}</td>
+      <td class="off-cell">${offS(p).toFixed(1)}</td>
+      <td class="def-cell">${defS(p).toFixed(1)}</td>
+      <td><div class="tbl-bar"><div class="tbl-fill" style="width:${Math.round(ovr(p))}%"></div></div></td>
+    </tr>`).join('') + `</tbody>`;
+
+  /* ─────────────────────────────────────────
+     10. CHART.JS BAR CHART
+  ───────────────────────────────────────── */
+  new Chart(document.getElementById('lineupChart'), {
+    type: 'bar',
+    data: {
+      labels: ALL.slice(0,5).map((_,i) => `#${i+1}`),
+      datasets: [
+        { label:'Offensive', data: ALL.slice(0,5).map(g => +lOff(g).toFixed(1)), backgroundColor:'rgba(30,79,216,0.75)', borderRadius:5, borderSkipped:false },
+        { label:'Defensive', data: ALL.slice(0,5).map(g => +lDef(g).toFixed(1)), backgroundColor:'rgba(10,138,110,0.65)', borderRadius:5, borderSkipped:false },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#0a2463',
+          titleColor: '#ffffff',
+          bodyColor: '#a0b8e8',
+          borderColor: 'rgba(255,255,255,0.15)',
+          borderWidth: 1
+        }
+      },
+      scales: {
+        x: { grid:{ display:false }, ticks:{ color:'#7a8fb5', font:{ family:"'DM Sans',sans-serif", size:12 } } },
+        y: { min:60, max:95, grid:{ color:'rgba(10,36,99,0.06)' }, ticks:{ color:'#7a8fb5', font:{ family:"'DM Sans',sans-serif", size:11 } } }
+      }
+    }
+  });
+
+  /* ─────────────────────────────────────────
+     11. GAME SIMULATION QUARTERS
+  ───────────────────────────────────────── */
+  const QD = [
+    { q:'Q1', mode:'Offensive', cls:'q-off', pill:'pill-off', g: SC[1].lineup },
+    { q:'Q2', mode:'Balanced',  cls:'q-bal', pill:'pill-bal', g: ALL[0] },
+    { q:'Q3', mode:'Defensive', cls:'q-def', pill:'pill-def', g: SC[2].lineup },
+    { q:'Q4', mode:'Closing',   cls:'q-cls', pill:'pill-cls', g: SC[3].lineup },
+  ];
+  document.getElementById('simGrid').innerHTML = QD.map(q => `
+    <div class="q-card ${q.cls}">
+      <div class="q-label">${q.q}</div>
+      <span class="q-mode-pill ${q.pill}">${q.mode}</span>
+      <div class="q-players">${q.g.map(p => p.name.split(' ').pop()).join('<br>')}</div>
+      <div class="q-score">${lComp(q.g).toFixed(1)}</div>
+      <div class="q-score-lbl">score</div>
+    </div>`).join('');
+
+</script>
+</body>
+</html>
